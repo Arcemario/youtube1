@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Videos</title>
+</head>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #1e1e2f, #10101b);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+header {
+    padding: 10px 20px;
+    background: #2a2a3c;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+header input {
+    width: 50%;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+}
+header button {
+    padding: 10px 20px;
+    background-color: #47aef2;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+}
+#principal {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+#barra-lateral {
+    width: 300px;
+    background-color: #20202d;
+    padding: 20px;
+    overflow-y: auto;
+}
+#barra-lateral h3 {
+    margin-bottom: 10px;
+}
+#barra-lateral ul {
+    list-style: none;
+    padding: 0;
+}
+#barra-lateral ul li {
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+#contenido {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+}
+#lista-videos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.video-item {
+    background: #2e2e3f;
+    border-radius: 10px;
+    overflow: hidden;
+    width: calc(33.33% - 20px);
+}
+.video-item img {
+    width: 100%;
+}
+.video-item h4 {
+    margin: 10px;
+    font-size: 16px;
+}
+footer {
+    background-color: #2a2a3c;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#reproductor {
+    display: flex;
+    align-items: center;
+}
+#reproductor iframe {
+    width: 300px;
+    height: 150px;
+    margin-right: 10px;
+}
+#controles-reproductor {
+    flex: 1;
+}
+</style>
+<body>
+    <header>
+        <input type="text" id="entrada-buscar" placeholder="Buscar videos en YouTube">
+        <button id="boton-buscar">Buscar</button>
+    </header>
+    <div id="principal">
+        <aside id="barra-lateral">
+            <h3>Lista de Reproducción</h3>
+            <ul id="lista-reproduccion"></ul>
+        </aside>
+        <section id="contenido">
+            <div id="lista-videos"></div>
+        </section>
+    </div>
+    <footer>
+        <div id="reproductor">
+            <iframe id="video-reproductor" src="" frameborder="0" allowfullscreen></iframe>
+            <div id="controles-reproductor">
+                <h4 id="titulo-video">Selecciona un video para reproducir</h4>
+            </div>
+        </div>
+    </footer>
+    <script>
+        const apiKey = 'AIzaSyDcZ7ZAPVt0GUtL2tuwOZJPqDTzbvPsB18';
+        const entradaBuscar = document.getElementById('entrada-buscar');
+        const botonBuscar = document.getElementById('boton-buscar');
+        const listaVideos = document.getElementById('lista-videos');
+        const listaReproduccion = document.getElementById('lista-reproduccion');
+        const videoReproductor = document.getElementById('video-reproductor');
+        const tituloVideo = document.getElementById('titulo-video');
+        let listaGuardada = JSON.parse(localStorage.getItem('lista-reproduccion')) || [];
+        function renderizarListaReproduccion() {
+            listaReproduccion.innerHTML = '';
+            listaGuardada.forEach(video => {
+                const li = document.createElement('li');
+                li.textContent = video.titulo;
+                li.onclick = () => {
+                    videoReproductor.src = `https://www.youtube.com/embed/${video.videoId}`;
+                    tituloVideo.textContent = video.titulo;
+                };
+                listaReproduccion.appendChild(li);
+            });
+        }
+        function buscarVideos() {
+            const consulta = entradaBuscar.value;
+            fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${consulta}&type=video&key=${apiKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    listaVideos.innerHTML = '';
+                    data.items.forEach(video => {
+                        const videoId = video.id.videoId;
+                        const titulo = video.snippet.title;
+                        const miniatura = video.snippet.thumbnails.medium.url;
+
+                        const div = document.createElement('div');
+                        div.className = 'video-item';
+                        div.innerHTML = `
+                            <img src="${miniatura}" alt="${titulo}">
+                            <h4>${titulo}</h4>
+                        `;
+                        div.onclick = () => {
+                            videoReproductor.src = `https://www.youtube.com/embed/${videoId}`;
+                            tituloVideo.textContent = titulo;
+                        };
+                        const botonAgregar = document.createElement('button');
+                        botonAgregar.textContent = 'Agregar a la Lista';
+                        botonAgregar.onclick = (e) => {
+                            e.stopPropagation();
+                            listaGuardada.push({ videoId, titulo });
+                            localStorage.setItem('lista-reproduccion', JSON.stringify(listaGuardada));
+                            renderizarListaReproduccion();
+                        };
+                        div.appendChild(botonAgregar);
+                        listaVideos.appendChild(div);
+                    });
+                })
+                .catch(error => console.error('Error al buscar videos:', error));
+        }
+        botonBuscar.onclick = buscarVideos;
+        renderizarListaReproduccion();
+    </script>
+</body>
+</html>
